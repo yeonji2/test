@@ -288,7 +288,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
     <label for="sTitle">행사 이름<input id="sTitle" maxlength="60" placeholder="예: 2026 송년의 밤"></label>
     <label for="sPrompt">작성 화면 안내 문구<input id="sPrompt" maxlength="60" placeholder="예: 축하의 한마디를 남겨주세요"></label>
     <label for="sSecs">새 방명록 전체화면 시간(초)<input id="sSecs" type="number" min="3" max="60" step="1"></label>
-    <label class="check" for="sQr"><input id="sQr" type="checkbox">방명록 벽에 휴대폰 참여 QR 코드 표시</label>
+    <label class="check" for="sQr" id="sQrRow"><input id="sQr" type="checkbox">방명록 벽에 휴대폰 참여 QR 코드 표시</label>
     <div class="s-msg" id="sMsg" role="status"></div>
     <div class="row">
       <button type="button" id="sCancel">닫기</button>
@@ -375,7 +375,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
   }
   let qrDrawn = false;
   function renderJoin() {
-    const show = config.showQr !== false && typeof window.QRCode === "function" && backend !== "pending" && backend !== "local";
+    const show = config.showQr !== false && typeof window.QRCode === "function" && backend === "server"; // 로그인 없이 저장되는 서버 모드에서만 휴대폰 참여 QR 표시
     if (show && !qrDrawn) {
       try { new window.QRCode($("qr"), { text: JOIN_URL, width: 256, height: 256, colorDark: "#111111", colorLight: "#ffffff", correctLevel: window.QRCode.CorrectLevel.M }); qrDrawn = true; }
       catch (e) { qrDrawn = false; }
@@ -704,6 +704,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
     $("dSettings").onclick = () => {
       const srv = backend === "server";
       $("sAdminRow").hidden = !srv;
+      $("sQrRow").hidden = !srv;
       $("sMsg").textContent = srv && !serverInfo.admin ? "서버에 ADMIN_PASSWORD가 설정되지 않아 삭제와 문구 변경을 할 수 없어요." : "";
       $("sKey").value = getAdminKey();
       $("sTitle").value = config.title || ""; $("sPrompt").value = config.prompt || ""; $("sSecs").value = config.secs || DEFAULTS.secs; $("sQr").checked = config.showQr !== false;
