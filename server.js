@@ -28,8 +28,8 @@ function pgStore(url) {
       await pool.query(`CREATE INDEX IF NOT EXISTS guestbook_entries_created ON guestbook_entries (created_at DESC)`);
       await pool.query(`CREATE TABLE IF NOT EXISTS guestbook_config (k TEXT PRIMARY KEY, v JSONB NOT NULL)`);
     },
-    async list() {
-      const r = await pool.query(`SELECT id, created_at, ext FROM guestbook_entries ORDER BY created_at DESC LIMIT $1`, [LIST_LIMIT]);
+    async list(limit = LIST_LIMIT) {
+      const r = await pool.query(`SELECT id, created_at, ext FROM guestbook_entries ORDER BY created_at DESC LIMIT $1`, [limit]);
       return r.rows.map((x) => ({ id: x.id, createdAt: Number(x.created_at), ext: x.ext }));
     },
     async count() { return Number((await pool.query(`SELECT COUNT(*) AS n FROM guestbook_entries`)).rows[0].n); },
@@ -55,7 +55,7 @@ function fileStore(dir) {
       fs.mkdirSync(IMG_DIR, { recursive: true });
       try { meta = { ...meta, ...JSON.parse(fs.readFileSync(META, "utf8")) }; } catch (e) { /* 첫 실행 */ }
     },
-    async list() { return meta.entries.slice(-LIST_LIMIT).reverse(); },
+    async list(limit = LIST_LIMIT) { return meta.entries.slice(-limit).reverse(); },
     async count() { return meta.entries.length; },
     async add(e, buf) { fs.writeFileSync(path.join(IMG_DIR, `${e.id}.${e.ext}`), buf); meta.entries.push(e); save(); },
     async remove(id) {
@@ -115,11 +115,13 @@ function rateLimited(req) {
 setInterval(() => { const now = Date.now(); for (const [ip, l] of hits) if (!l.some((t) => now - t < 60000)) hits.delete(ip); }, 60000);
 
 const server = http.createServer(async (req, res) => {
-  const p = new URL(req.url, "http://x").pathname;
+  const url = new URL(req.url, "http://x");
+  const p = url.pathname;
   try {
     if (p === "/api/health") return send(res, 200, { ok: true, app: "guestbook", admin: !!ADMIN_PASSWORD, storage: process.env.DATABASE_URL ? "postgres" : "file" });
 
-    if (p === "/api/entries" && req.method === "GET") return send(res, 200, (await store.list()).map(publicEntry));
+    // ?all=1 은 추첨 화면용: 최근 300개가 아니라 전체 목록
+    if (p === "/api/entries" && req.method === "GET") return send(res, 200, (await store.list(url.searchParams.get("all") === "1" ? MAX_ENTRIES : LIST_LIMIT)).map(publicEntry));
     if (p === "/api/entries" && req.method === "POST") {
       if (rateLimited(req)) return send(res, 429, { error: "rate_limited" });
       const body = await readJson(req);
