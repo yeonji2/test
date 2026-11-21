@@ -1,0 +1,13 @@
+{
+  "name": "handwriting-guestbook",
+  "version": "1.0.0",
+  "private": true,
+  "description": "손글씨 방명록: 태블릿·휴대폰에서 쓴 방명록을 대형 화면에 전체화면으로 게시",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

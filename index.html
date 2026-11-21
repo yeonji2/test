@@ -132,6 +132,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 .settings { position: absolute; z-index: 30; top: 70px; right: max(16px, env(safe-area-inset-right, 0px)); width: min(360px, calc(100% - 32px)); background: var(--stage-2); border: 1px solid #2a3350; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 20px 50px rgba(0,0,0,.5); }
 .settings label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--stage-muted); }
 .settings input { background: var(--stage); color: var(--stage-fg); border: 1px solid #2a3350; border-radius: 8px; padding: 9px 10px; font: inherit; font-size: 15px; }
+.settings .s-msg { font-size: 13px; color: #ffb4a8; min-height: 0; }
+.settings .s-msg:empty { display: none; }
 .settings .row { display: flex; gap: 8px; justify-content: flex-end; }
 .settings button { background: var(--stage); color: var(--stage-fg); border: 1px solid #2a3350; border-radius: 8px; padding: 8px 14px; }
 .settings button.save { background: #ffd65a; color: #1a1400; border-color: #ffd65a; font-weight: 600; }
@@ -282,10 +284,12 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
     <div class="bar"><i id="spotBar"></i></div>
   </div>
   <form class="settings" id="settingsPanel" hidden>
+    <label for="sKey" id="sAdminRow" hidden>관리자 비밀번호 (Railway의 ADMIN_PASSWORD)<input id="sKey" type="password" autocomplete="current-password"></label>
     <label for="sTitle">행사 이름<input id="sTitle" maxlength="60" placeholder="예: 2026 송년의 밤"></label>
     <label for="sPrompt">작성 화면 안내 문구<input id="sPrompt" maxlength="60" placeholder="예: 축하의 한마디를 남겨주세요"></label>
     <label for="sSecs">새 방명록 전체화면 시간(초)<input id="sSecs" type="number" min="3" max="60" step="1"></label>
     <label class="check" for="sQr"><input id="sQr" type="checkbox">방명록 벽에 휴대폰 참여 QR 코드 표시</label>
+    <div class="s-msg" id="sMsg" role="status"></div>
     <div class="row">
       <button type="button" id="sCancel">닫기</button>
       <button type="submit" class="save">저장</button>
@@ -297,10 +301,22 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const JOIN_URL = "https://claude.ai/artifact/YW46nm9GpXLkx9U9GsbvxY#write";
+  const ARTIFACT_JOIN_URL = "https://claude.ai/artifact/YW46nm9GpXLkx9U9GsbvxY#write";
+  let JOIN_URL = ARTIFACT_JOIN_URL;
   const DEFAULTS = { title: "손글씨 방명록", prompt: "축하의 한마디를 남겨주세요", secs: 8, showQr: true };
   let config = { ...DEFAULTS };
-  let db = null, user = null, backend = "pending"; // "db" | "local"
+  let db = null, user = null, backend = "pending"; // "db"(claude.ai) | "server"(자체 서버) | "local"
+  let serverInfo = null;
+  const ADMIN_KEY_STORE = "guestbook-admin-key";
+  const getAdminKey = () => { try { return localStorage.getItem(ADMIN_KEY_STORE) || ""; } catch (e) { return ""; } };
+  const setAdminKey = (k) => { try { k ? localStorage.setItem(ADMIN_KEY_STORE, k) : localStorage.removeItem(ADMIN_KEY_STORE); } catch (e) {} };
+  async function api(path, opts = {}) {
+    const headers = { ...(opts.body ? { "Content-Type": "application/json" } : {}), ...(opts.admin ? { "X-Admin-Key": getAdminKey() } : {}) };
+    const r = await fetch(path, { method: opts.method || "GET", headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw { code: data.error || "http_" + r.status, status: r.status };
+    return data;
+  }
   const bc = ("BroadcastChannel" in window) ? new BroadcastChannel("guestbook-local") : null;
   const configListeners = [];
 
@@ -312,7 +328,25 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
         user = await window.claude.use("user");
       }
     } catch (e) { db = null; }
-    backend = db ? "db" : "local";
+    if (!db) {
+      // claude.ai 밖(예: Railway)에서는 같은 주소의 방명록 서버를 사용
+      try {
+        const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 5000);
+        const r = await fetch("/api/health", { signal: ctl.signal, cache: "no-store" }); clearTimeout(t);
+        const h = r.ok ? await r.json() : null;
+        if (h && h.app === "guestbook") serverInfo = h;
+      } catch (e) { serverInfo = null; }
+    }
+    backend = db ? "db" : serverInfo ? "server" : "local";
+    if (backend === "server") {
+      JOIN_URL = location.origin + location.pathname + "#write";
+      try { config = { ...DEFAULTS, ...(await api("/api/config")) }; } catch (e) {}
+      configListeners.forEach((f) => f());
+      if ("EventSource" in window) {
+        const cs = new EventSource("/api/events");
+        cs.addEventListener("config", (m) => { try { config = { ...DEFAULTS, ...JSON.parse(m.data) }; configListeners.forEach((f) => f()); } catch (e) {} });
+      }
+    }
     if (db) {
       db.doc("config/event").onSnapshot((s) => {
         if (s.exists) { const d = s.data(); config = { ...DEFAULTS, ...d }; }
@@ -321,12 +355,14 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
     }
     updateHomeNotice();
     // 로컬 모드는 같은 브라우저의 탭끼리만 연결되므로, 휴대폰·태블릿 단독 사용이면 경고
-    $("wOffline").hidden = backend === "db";
+    $("wOffline").hidden = backend !== "local";
     return backend;
   })();
 
   function updateHomeNotice() {
-    $("homeNotice").textContent = backend === "db"
+    $("homeNotice").textContent = backend === "server"
+      ? "온라인으로 연결되었습니다. 로그인 없이 이 주소만 열면 작성용·전시용 기기가 실시간으로 이어집니다."
+      : backend === "db"
       ? "온라인으로 연결되었습니다. 작성용·전시용 기기 모두 같은 링크를 열고 로그인하면 실시간으로 이어집니다."
       : "온라인 저장소에 연결할 수 없어 이 기기 안에서만 동작합니다(같은 브라우저의 다른 탭끼리 연결). 여러 기기를 쓰려면 링크를 열 때 로그인해 주세요.";
   }
@@ -339,7 +375,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
   }
   let qrDrawn = false;
   function renderJoin() {
-    const show = config.showQr !== false && typeof window.QRCode === "function";
+    const show = config.showQr !== false && typeof window.QRCode === "function" && backend !== "pending" && backend !== "local";
     if (show && !qrDrawn) {
       try { new window.QRCode($("qr"), { text: JOIN_URL, width: 256, height: 256, colorDark: "#111111", colorLight: "#ffffff", correctLevel: window.QRCode.CorrectLevel.M }); qrDrawn = true; }
       catch (e) { qrDrawn = false; }
@@ -487,6 +523,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
       try {
         if (backend === "db") {
           await saveWithRetry(entry);
+        } else if (backend === "server") {
+          await api("/api/entries", { method: "POST", body: { img } });
         } else {
           entry.id = "local-" + entry.createdAt + "-" + Math.random().toString(36).slice(2, 7);
           if (!bc) throw { code: "no_channel" };
@@ -498,6 +536,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
       } catch (e) {
         const code = e && e.code;
         setStatus(code === "quota_exceeded" ? "저장 공간이 가득 찼어요. 전시 화면에서 오래된 방명록을 지워주세요."
+          : code === "rate_limited" ? "잠시 너무 많이 올렸어요. 1분 뒤에 다시 눌러주세요."
+          : code === "full" ? "방명록이 가득 찼어요. 운영자에게 알려주세요."
           : code === "invalid_argument" ? "이 계정은 방명록을 올릴 권한이 없어요. 링크 공유 권한을 ‘참여자(Contributor)’ 이상으로 바꿔주세요."
           : "연결이 불안정해 올리지 못했어요. 잠시 후 다시 눌러주세요.", true);
       } finally { sending = false; refreshUI(); }
@@ -562,8 +602,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
         clearTimeout(armed);
         try {
           if (backend === "db") await db.doc("entries/" + e.id).delete();
+          else if (backend === "server") await api("/api/entries/" + e.id, { method: "DELETE", admin: true });
           else { const i = local.findIndex((x) => x.id === e.id); if (i >= 0) local.splice(i, 1); setEntries(local.slice()); }
-        } catch (err) { $("dFoot").textContent = "삭제하지 못했어요. 편집 권한이 있는 계정인지 확인해 주세요."; }
+        } catch (err) { $("dFoot").textContent = backend === "server" ? "삭제하지 못했어요. ‘관리자’에서 비밀번호를 다시 입력해 주세요." : "삭제하지 못했어요. 편집 권한이 있는 계정인지 확인해 주세요."; }
       };
       c.append(b);
     }
@@ -611,6 +652,30 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
           }
           setEntries(list);
         }, (err) => { clearTimeout(loadT); $("dFoot").textContent = "실시간 연결이 끊겼어요. 페이지를 다시 열어 주세요."; });
+      } else if (backend === "server") {
+        $("dSettings").hidden = false; $("dSettings").textContent = "관리자";
+        canDelete = await checkAdmin();
+        const ingest = (list, initial) => {
+          for (const x of list) {
+            if (seen.has(x.id)) continue;
+            seen.add(x.id);
+            if (initial) newestAtReady = Math.max(newestAtReady, x.createdAt || 0);
+            else if ((x.createdAt || 0) > newestAtReady - 10 * 60 * 1000) enqueue(x, false);
+          }
+        };
+        const load = async (initial) => {
+          try { const list = await api("/api/entries"); ingest(list, initial); setEntries(list); $("dFoot").textContent = ""; }
+          catch (e) { $("dFoot").textContent = "방명록 서버에 연결하지 못하고 있어요. 네트워크를 확인해 주세요."; }
+        };
+        await load(true);
+        if ("EventSource" in window) {
+          let opened = false;
+          const es = new EventSource("/api/events");
+          es.onopen = () => { if (opened) load(false); opened = true; $("dFoot").textContent = ""; };
+          es.onerror = () => { $("dFoot").textContent = "실시간 연결이 잠시 끊겼어요. 자동으로 다시 연결하는 중…"; };
+          es.addEventListener("entry", (m) => { try { const x = JSON.parse(m.data); ingest([x], false); setEntries([x, ...entries.filter((y) => y.id !== x.id)]); } catch (e) {} });
+          es.addEventListener("delete", (m) => { try { const { id } = JSON.parse(m.data); setEntries(entries.filter((y) => y.id !== id)); } catch (e) {} });
+        } else setInterval(() => load(false), 5000);
       } else {
         canDelete = true;
         $("dFoot").textContent = "이 기기 전용 모드: 같은 브라우저의 다른 탭에서 연 작성 화면과 연결됩니다. 새로고침하면 목록이 비워집니다.";
@@ -623,8 +688,24 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
       }
     });
 
+    async function checkAdmin() {
+      if (!getAdminKey()) return false;
+      try { await api("/api/admin/check", { method: "POST", admin: true }); return true; } catch (e) { return false; }
+    }
+    function refreshDeleteButtons() {
+      wall.querySelectorAll(".card").forEach((c) => {
+        const has = c.querySelector(".del");
+        if (canDelete && !has) { const e = entries.find((x) => x.id === c.dataset.id); if (e) addDelete(c, e); }
+        if (!canDelete && has) has.remove();
+      });
+    }
+
     // 행사 문구 설정 (편집 권한자만)
     $("dSettings").onclick = () => {
+      const srv = backend === "server";
+      $("sAdminRow").hidden = !srv;
+      $("sMsg").textContent = srv && !serverInfo.admin ? "서버에 ADMIN_PASSWORD가 설정되지 않아 삭제와 문구 변경을 할 수 없어요." : "";
+      $("sKey").value = getAdminKey();
       $("sTitle").value = config.title || ""; $("sPrompt").value = config.prompt || ""; $("sSecs").value = config.secs || DEFAULTS.secs; $("sQr").checked = config.showQr !== false;
       $("settingsPanel").hidden = false; $("sTitle").focus();
     };
@@ -632,6 +713,14 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
     $("settingsPanel").addEventListener("submit", async (ev) => {
       ev.preventDefault();
       const next = { title: $("sTitle").value.trim() || DEFAULTS.title, prompt: $("sPrompt").value.trim() || DEFAULTS.prompt, secs: Math.max(3, Math.min(60, +$("sSecs").value || DEFAULTS.secs)), showQr: $("sQr").checked };
+      if (backend === "server") {
+        setAdminKey($("sKey").value.trim());
+        canDelete = await checkAdmin(); refreshDeleteButtons();
+        if (!canDelete) { $("sMsg").textContent = "비밀번호가 맞지 않아요. Railway의 ADMIN_PASSWORD 값을 입력해 주세요."; return; }
+        try { config = { ...DEFAULTS, ...(await api("/api/config", { method: "PUT", admin: true, body: next })) }; configListeners.forEach((f) => f()); $("settingsPanel").hidden = true; }
+        catch (e) { $("sMsg").textContent = "문구를 저장하지 못했어요. 다시 시도해 주세요."; }
+        return;
+      }
       try { await db.doc("config/event").set(next); $("settingsPanel").hidden = true; }
       catch (e) { $("dFoot").textContent = "문구를 저장하지 못했어요. 다시 시도해 주세요."; }
     });
