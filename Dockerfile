@@ -1,5 +1,7 @@
 FROM node:20-alpine
 WORKDIR /app
-COPY package.json server.js index.html ./
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+COPY server.js index.html ./
 ENV NODE_ENV=production
 CMD ["node", "server.js"]

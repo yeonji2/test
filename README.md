@@ -12,16 +12,19 @@
 
 ## Railway 배포
 
-1. 이 저장소로 서비스를 만들면 `npm start`(`node server.js`)로 실행됩니다. 외부 패키지는 없습니다.
-2. **Variables**에 다음을 추가합니다.
-   - `ADMIN_PASSWORD`: 전시 화면의 **관리자** 버튼에서 쓸 비밀번호입니다. 방명록 삭제와 행사 문구 변경에 필요해요. 없으면 두 기능이 꺼집니다.
-   - `DATA_DIR=/data`: 아래 볼륨을 쓸 때 지정합니다.
-3. **볼륨을 꼭 붙이세요.** 서비스에서 Volume을 만들고 마운트 경로를 `/data`로 지정합니다. 볼륨이 없으면 재배포하거나 재시작할 때 방명록이 모두 사라집니다.
-4. **Settings → Networking**에서 Generate Domain으로 주소를 만들고, 포트는 앱이 쓰는 `PORT`(Railway 기본 8080)에 맞춥니다.
+1. 이 저장소로 서비스를 만들면 `Dockerfile`로 빌드되고 `node server.js`로 실행됩니다.
+2. **데이터베이스 추가:** 프로젝트 화면에서 **+ Create → Database → PostgreSQL**을 누릅니다.
+3. 방명록 서비스의 **Variables**에 다음을 추가합니다.
+   - `DATABASE_URL` = `${{Postgres.DATABASE_URL}}` (값 입력칸에서 자동완성으로 고를 수 있습니다)
+   - `ADMIN_PASSWORD`: 전시 화면의 **관리자** 버튼에서 쓸 비밀번호. 방명록 삭제와 행사 문구 변경에 필요하며, 없으면 두 기능이 꺼집니다.
+4. **Settings → Networking**에서 Generate Domain으로 주소를 만듭니다.
+5. `https://<주소>/api/health`에 `"storage":"postgres"`가 보이면 데이터베이스에 저장되고 있는 것입니다.
+
+`DATABASE_URL`이 없으면 `DATA_DIR`(기본 `./data`) 폴더에 파일로 저장합니다. 이때는 Railway 볼륨을 붙이지 않으면 재배포할 때 방명록이 사라집니다.
 
 ## 동작 방식
 
-- `server.js`가 `index.html`을 내려주고, 방명록 이미지를 `DATA_DIR/img/`에, 목록과 설정을 `DATA_DIR/meta.json`에 저장합니다.
+- `server.js`가 `index.html`을 내려주고, 방명록 이미지와 행사 설정을 PostgreSQL(`guestbook_entries`, `guestbook_config` 테이블, 처음 실행할 때 자동 생성)에 저장합니다.
 - 새 방명록, 삭제, 설정 변경은 Server-Sent Events(`/api/events`)로 열려 있는 모든 화면에 바로 전달됩니다.
 - 남용 방지를 위해 한 IP당 1분에 20장까지만 올릴 수 있고, 전체 방명록은 최대 2,000장입니다.
 - 같은 `index.html`을 claude.ai 아티팩트로 열면 서버 대신 아티팩트의 공유 저장소를 사용합니다(이때는 로그인 필요). 서버 없이 파일만 열면 같은 브라우저의 탭끼리만 연결됩니다.
@@ -38,6 +41,10 @@
 | GET | `/api/events` | 실시간 이벤트 스트림 |
 
 ## 로컬 실행
+
+```bash
+npm install
+```
 
 ```bash
 ADMIN_PASSWORD=비밀번호 node server.js
