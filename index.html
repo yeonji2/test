@@ -379,7 +379,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const ARTIFACT_JOIN_URL = "https://claude.ai/artifact/YW46nm9GpXLkx9U9GsbvxY#write";
+  // 로그인 없이 쓰는 Railway 작성 화면. 자체 서버가 아닌 곳(claude.ai 등)에서 연 전시 화면의 QR도 이 주소로 연결
+  const ARTIFACT_JOIN_URL = "https://test-production-39b99f1d.up.railway.app/#write";
   let JOIN_URL = ARTIFACT_JOIN_URL;
   const DEFAULTS = { title: "손글씨 방명록", prompt: "축하의 한마디를 남겨주세요", secs: 8, showQr: true, introUrl: "https://simulationcenter-production.up.railway.app/", introLabel: "시뮬레이션센터 소개" };
   const isWebUrl = (u) => { try { const x = new URL(u); return x.protocol === "https:" || x.protocol === "http:"; } catch (e) { return false; } };
@@ -435,6 +436,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
     updateHomeNotice();
     // 로컬 모드는 같은 브라우저의 탭끼리만 연결되므로, 휴대폰·태블릿 단독 사용이면 경고
     $("wOffline").hidden = backend !== "local";
+    renderJoin();
     return backend;
   })();
 
@@ -462,8 +464,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
   }
   function renderJoin() {
     const lib = typeof window.QRCode === "function";
-    // 방명록 남기기 QR: 로그인 없이 저장되는 서버 모드에서만
-    const showJoin = lib && config.showQr !== false && backend === "server" && drawQr($("qr"), JOIN_URL);
+    // 방명록 남기기 QR: 항상 표시 (서버 모드는 이 주소의 작성 화면, 그 외에는 Railway 작성 화면)
+    const showJoin = lib && config.showQr !== false && backend !== "pending" && drawQr($("qr"), JOIN_URL);
     $("join").hidden = !showJoin;
     // 시뮬레이션센터 소개 QR: 관리자 설정에 주소가 있으면 어느 모드에서나
     const url = ((config.introUrl || "").trim()) || DEFAULTS.introUrl; // 비어 있으면 시뮬레이션센터 기본 주소
@@ -800,6 +802,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
       const srv = backend === "server";
       $("sAdminRow").hidden = !srv;
       $("sQrRow").hidden = !srv;
+      if (!srv) $("sQr").checked = true;
       $("sMsg").textContent = srv && !serverInfo.admin ? "서버에 ADMIN_PASSWORD가 설정되지 않아 삭제와 문구 변경을 할 수 없어요." : "";
       $("sKey").value = getAdminKey();
       $("sTitle").value = config.title || ""; $("sPrompt").value = config.prompt || ""; $("sSecs").value = config.secs || DEFAULTS.secs; $("sQr").checked = config.showQr !== false;
