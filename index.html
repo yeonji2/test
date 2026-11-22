@@ -122,9 +122,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 .spot .label { font-size: clamp(14px, 1.6vw, 22px); letter-spacing: .12em; color: var(--stage-muted); font-variant-numeric: tabular-nums; }
 .spot .label b { color: #ffd65a; font-weight: 600; }
 /* QR이 있으면 오른쪽에 QR 두 장 너비만큼 비워두고 방명록을 그 왼쪽에 크게 */
-#display { --qr-w: clamp(110px, 11vw, 170px); }
-#display.has-qr .spot { padding-right: calc(2 * (var(--qr-w) + 24px) + 12px + 32px); --spot-w: min(100%, calc(78vh * 1.6)); }
-#display.has-qr .wall { padding-bottom: calc(var(--qr-w) + 80px); }
+#display { --qr-w: clamp(110px, min(11vw, 30vh), 200px); }
+#display.has-qr .spot { padding-right: calc(var(--qr-w) + 24px + 48px); --spot-w: min(100%, calc(78vh * 1.6)); }
+#display.has-qr .wall { margin-right: calc(var(--qr-w) + 24px + 24px); }
 .spot .frame { background: var(--paper); border-radius: 6px; box-shadow: 0 30px 80px rgba(0,0,0,.6); aspect-ratio: 16 / 10; width: var(--spot-w); max-width: 100%; overflow: hidden; }
 .spot .frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .spot .bar { width: var(--spot-w); max-width: 100%; height: 3px; background: #26304d; border-radius: 2px; overflow: hidden; }
@@ -183,8 +183,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 }
 
 /* 전시 화면의 휴대폰 참여 QR */
-/* 오른쪽 아래 QR 묶음: 방명록 남기기 + 시뮬레이션센터 소개. 새 방명록 전체화면 위에도 보이게 맨 위에 둠 */
-.qrs { position: absolute; z-index: 25; right: max(16px, env(safe-area-inset-right, 0px)); bottom: 16px; display: flex; gap: 12px; align-items: flex-end; }
+/* 화면 오른쪽 가운데 QR 세로 묶음: 방명록 남기기 + 시뮬레이션센터 소개. 새 방명록 전체화면 위에도 보이게 맨 위에 둠 */
+.qrs { position: absolute; z-index: 25; right: max(16px, env(safe-area-inset-right, 0px)); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 14px; align-items: center; }
 .join { background: var(--paper); color: #1b2230; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; box-shadow: 0 12px 30px rgba(0,0,0,.45); }
 .join .qr { width: var(--qr-w, clamp(110px, 11vw, 170px)); aspect-ratio: 1; }
 .join .qr img, .join .qr canvas { width: 100% !important; height: 100% !important; display: block; image-rendering: pixelated; }
