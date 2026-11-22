@@ -365,7 +365,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
     <label for="sPrompt">작성 화면 안내 문구<input id="sPrompt" maxlength="60" placeholder="예: 축하의 한마디를 남겨주세요"></label>
     <label for="sSecs">새 방명록 전체화면 시간(초)<input id="sSecs" type="number" min="3" max="60" step="1"></label>
     <label class="check" for="sQr" id="sQrRow"><input id="sQr" type="checkbox">‘방명록 남기기’ QR 코드 표시</label>
-    <label for="sIntroUrl">소개 페이지 주소 (비워두면 소개 QR을 숨겨요)<input id="sIntroUrl" type="url" maxlength="500" placeholder="https://…" inputmode="url"></label>
+    <label for="sIntroUrl">소개 페이지 주소 (비워두면 시뮬레이션센터 기본 주소)<input id="sIntroUrl" type="url" maxlength="500" placeholder="https://…" inputmode="url"></label>
     <label for="sIntroLabel">소개 QR 아래 문구<input id="sIntroLabel" maxlength="30" placeholder="시뮬레이션센터 소개"></label>
     <div class="s-msg" id="sMsg" role="status"></div>
     <div class="row">
@@ -381,7 +381,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
   const $ = (id) => document.getElementById(id);
   const ARTIFACT_JOIN_URL = "https://claude.ai/artifact/YW46nm9GpXLkx9U9GsbvxY#write";
   let JOIN_URL = ARTIFACT_JOIN_URL;
-  const DEFAULTS = { title: "손글씨 방명록", prompt: "축하의 한마디를 남겨주세요", secs: 8, showQr: true, introUrl: "", introLabel: "시뮬레이션센터 소개" };
+  const DEFAULTS = { title: "손글씨 방명록", prompt: "축하의 한마디를 남겨주세요", secs: 8, showQr: true, introUrl: "https://simulationcenter-production.up.railway.app/", introLabel: "시뮬레이션센터 소개" };
   const isWebUrl = (u) => { try { const x = new URL(u); return x.protocol === "https:" || x.protocol === "http:"; } catch (e) { return false; } };
   let config = { ...DEFAULTS };
   let db = null, user = null, backend = "pending"; // "db"(claude.ai) | "server"(자체 서버) | "local"
@@ -466,7 +466,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
     const showJoin = lib && config.showQr !== false && backend === "server" && drawQr($("qr"), JOIN_URL);
     $("join").hidden = !showJoin;
     // 시뮬레이션센터 소개 QR: 관리자 설정에 주소가 있으면 어느 모드에서나
-    const url = (config.introUrl || "").trim();
+    const url = ((config.introUrl || "").trim()) || DEFAULTS.introUrl; // 비어 있으면 시뮬레이션센터 기본 주소
     const showIntro = lib && isWebUrl(url) && drawQr($("introQr"), url);
     $("intro").hidden = !showIntro;
     $("introLabel").textContent = (config.introLabel || "").trim() || DEFAULTS.introLabel;
@@ -803,7 +803,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
       $("sMsg").textContent = srv && !serverInfo.admin ? "서버에 ADMIN_PASSWORD가 설정되지 않아 삭제와 문구 변경을 할 수 없어요." : "";
       $("sKey").value = getAdminKey();
       $("sTitle").value = config.title || ""; $("sPrompt").value = config.prompt || ""; $("sSecs").value = config.secs || DEFAULTS.secs; $("sQr").checked = config.showQr !== false;
-      $("sIntroUrl").value = config.introUrl || ""; $("sIntroLabel").value = config.introLabel || "";
+      $("sIntroUrl").value = config.introUrl || DEFAULTS.introUrl; $("sIntroLabel").value = config.introLabel || "";
       $("settingsPanel").hidden = false; $("sTitle").focus();
     };
     $("sCancel").onclick = () => { $("settingsPanel").hidden = true; };
