@@ -11,7 +11,9 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
 const MAX_BODY = 400 * 1024;
 const MAX_ENTRIES = 2000;
 const LIST_LIMIT = 300;
-const DEFAULT_CONFIG = { title: "손글씨 방명록", prompt: "축하의 한마디를 남겨주세요", secs: 8, showQr: true };
+const DEFAULT_CONFIG = { title: "손글씨 방명록", prompt: "축하의 한마디를 남겨주세요", secs: 8, showQr: true, introUrl: "", introLabel: "시뮬레이션센터 소개" };
+// 소개 QR에 넣을 주소는 http/https만 허용
+const cleanUrl = (u) => { try { const x = new URL(String(u || "").trim()); return /^https?:$/.test(x.protocol) ? x.href.slice(0, 500) : ""; } catch (e) { return ""; } };
 const TYPES = { "image/webp": "webp", "image/jpeg": "jpg", "image/png": "png" };
 const MIME = { webp: "image/webp", jpg: "image/jpeg", png: "image/png" };
 
@@ -155,6 +157,8 @@ const server = http.createServer(async (req, res) => {
         prompt: String(b.prompt || DEFAULT_CONFIG.prompt).slice(0, 60),
         secs: Math.max(3, Math.min(60, Number(b.secs) || DEFAULT_CONFIG.secs)),
         showQr: b.showQr !== false,
+        introUrl: cleanUrl(b.introUrl),
+        introLabel: String(b.introLabel || DEFAULT_CONFIG.introLabel).slice(0, 30),
       };
       await store.setConfig(c); broadcast("config", c);
       return send(res, 200, c);

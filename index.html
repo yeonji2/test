@@ -117,19 +117,23 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 .empty b { font-family: var(--font-hand); font-weight: 400; font-size: 44px; color: var(--stage-fg); }
 .d-foot { color: var(--stage-muted); font-size: 12px; padding-top: 8px; min-height: 1.2em; }
 
-.spot { position: absolute; inset: 0; z-index: 20; background: radial-gradient(ellipse at center, #1c2542 0%, var(--stage) 70%);
+.spot { --spot-w: min(88vw, calc(78vh * 1.6)); position: absolute; inset: 0; z-index: 20; background: radial-gradient(ellipse at center, #1c2542 0%, var(--stage) 70%);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 4vh 4vw; box-sizing: border-box; }
 .spot .label { font-size: clamp(14px, 1.6vw, 22px); letter-spacing: .12em; color: var(--stage-muted); font-variant-numeric: tabular-nums; }
 .spot .label b { color: #ffd65a; font-weight: 600; }
-.spot .frame { background: var(--paper); border-radius: 6px; box-shadow: 0 30px 80px rgba(0,0,0,.6); aspect-ratio: 16 / 10; width: min(88vw, calc(78vh * 1.6)); max-width: 100%; overflow: hidden; }
+/* QR이 있으면 오른쪽에 QR 두 장 너비만큼 비워두고 방명록을 그 왼쪽에 크게 */
+#display { --qr-w: clamp(110px, 11vw, 170px); }
+#display.has-qr .spot { padding-right: calc(2 * (var(--qr-w) + 24px) + 12px + 32px); --spot-w: min(100%, calc(78vh * 1.6)); }
+#display.has-qr .wall { padding-bottom: calc(var(--qr-w) + 80px); }
+.spot .frame { background: var(--paper); border-radius: 6px; box-shadow: 0 30px 80px rgba(0,0,0,.6); aspect-ratio: 16 / 10; width: var(--spot-w); max-width: 100%; overflow: hidden; }
 .spot .frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
-.spot .bar { width: min(88vw, calc(78vh * 1.6)); max-width: 100%; height: 3px; background: #26304d; border-radius: 2px; overflow: hidden; }
+.spot .bar { width: var(--spot-w); max-width: 100%; height: 3px; background: #26304d; border-radius: 2px; overflow: hidden; }
 .spot .bar i { display: block; height: 100%; width: 100%; background: #ffd65a; transform-origin: left; }
 .spot.enter .frame { animation: drop .9s cubic-bezier(.2,.9,.25,1.15) both; }
 @keyframes drop { from { transform: translateY(40px) scale(.85) rotate(-3deg); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes shrink { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
-.settings { position: absolute; z-index: 30; top: 70px; right: max(16px, env(safe-area-inset-right, 0px)); width: min(360px, calc(100% - 32px)); background: var(--stage-2); border: 1px solid #2a3350; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 20px 50px rgba(0,0,0,.5); }
+.settings { max-height: calc(100% - 90px); overflow-y: auto; box-sizing: border-box; position: absolute; z-index: 30; top: 70px; right: max(16px, env(safe-area-inset-right, 0px)); width: min(360px, calc(100% - 32px)); background: var(--stage-2); border: 1px solid #2a3350; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 20px 50px rgba(0,0,0,.5); }
 .settings label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--stage-muted); }
 .settings input { background: var(--stage); color: var(--stage-fg); border: 1px solid #2a3350; border-radius: 8px; padding: 9px 10px; font: inherit; font-size: 15px; }
 .settings .s-msg { font-size: 13px; color: #ffb4a8; min-height: 0; }
@@ -179,14 +183,16 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 }
 
 /* 전시 화면의 휴대폰 참여 QR */
-.join { position: absolute; z-index: 15; right: max(16px, env(safe-area-inset-right, 0px)); bottom: 16px; background: var(--paper); color: #1b2230; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; box-shadow: 0 12px 30px rgba(0,0,0,.45); }
-.join .qr { width: clamp(110px, 11vw, 170px); aspect-ratio: 1; }
+/* 오른쪽 아래 QR 묶음: 방명록 남기기 + 시뮬레이션센터 소개. 새 방명록 전체화면 위에도 보이게 맨 위에 둠 */
+.qrs { position: absolute; z-index: 25; right: max(16px, env(safe-area-inset-right, 0px)); bottom: 16px; display: flex; gap: 12px; align-items: flex-end; }
+.join { background: var(--paper); color: #1b2230; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; box-shadow: 0 12px 30px rgba(0,0,0,.45); }
+.join .qr { width: var(--qr-w, clamp(110px, 11vw, 170px)); aspect-ratio: 1; }
 .join .qr img, .join .qr canvas { width: 100% !important; height: 100% !important; display: block; image-rendering: pixelated; }
-.join span { font-size: clamp(12px, 1vw, 15px); font-weight: 600; }
+.join span { font-size: clamp(12px, 1vw, 15px); font-weight: 600; text-align: center; max-width: clamp(110px, 11vw, 170px); line-height: 1.3; }
 .spot .join-mini { display: none; }
 .settings .check { flex-direction: row; align-items: center; gap: 8px; color: var(--stage-fg); }
 .settings .check input { width: 18px; height: 18px; padding: 0; }
-@media (max-width: 700px) { .join { display: none; } }
+@media (max-width: 700px) { .qrs { display: none; } }
 
 /* ---------- 추첨 화면 ---------- */
 #draw { background: var(--stage); color: var(--stage-fg); height: 100%; overflow: hidden; display: flex; flex-direction: column; color-scheme: dark; position: relative;
@@ -338,9 +344,15 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
     </div>
   </div>
   <div class="d-foot" id="dFoot"></div>
-  <div class="join" id="join" hidden>
-    <div class="qr" id="qr" role="img" aria-label="휴대폰으로 방명록 쓰기 QR 코드"></div>
-    <span>휴대폰으로 방명록 쓰기</span>
+  <div class="qrs" id="qrs">
+    <div class="join" id="join" hidden>
+      <div class="qr" id="qr" role="img" aria-label="방명록 남기기 QR 코드"></div>
+      <span>방명록 남기기</span>
+    </div>
+    <div class="join" id="intro" hidden>
+      <div class="qr" id="introQr" role="img" aria-label="시뮬레이션센터 소개 QR 코드"></div>
+      <span id="introLabel">시뮬레이션센터 소개</span>
+    </div>
   </div>
   <div class="spot" id="spot" hidden>
     <div class="label" id="spotLabel"><b>새 방명록</b></div>
@@ -352,7 +364,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
     <label for="sTitle">행사 이름<input id="sTitle" maxlength="60" placeholder="예: 2026 송년의 밤"></label>
     <label for="sPrompt">작성 화면 안내 문구<input id="sPrompt" maxlength="60" placeholder="예: 축하의 한마디를 남겨주세요"></label>
     <label for="sSecs">새 방명록 전체화면 시간(초)<input id="sSecs" type="number" min="3" max="60" step="1"></label>
-    <label class="check" for="sQr" id="sQrRow"><input id="sQr" type="checkbox">방명록 벽에 휴대폰 참여 QR 코드 표시</label>
+    <label class="check" for="sQr" id="sQrRow"><input id="sQr" type="checkbox">‘방명록 남기기’ QR 코드 표시</label>
+    <label for="sIntroUrl">소개 페이지 주소 (비워두면 소개 QR을 숨겨요)<input id="sIntroUrl" type="url" maxlength="500" placeholder="https://…" inputmode="url"></label>
+    <label for="sIntroLabel">소개 QR 아래 문구<input id="sIntroLabel" maxlength="30" placeholder="시뮬레이션센터 소개"></label>
     <div class="s-msg" id="sMsg" role="status"></div>
     <div class="row">
       <button type="button" id="sCancel">닫기</button>
@@ -367,7 +381,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
   const $ = (id) => document.getElementById(id);
   const ARTIFACT_JOIN_URL = "https://claude.ai/artifact/YW46nm9GpXLkx9U9GsbvxY#write";
   let JOIN_URL = ARTIFACT_JOIN_URL;
-  const DEFAULTS = { title: "손글씨 방명록", prompt: "축하의 한마디를 남겨주세요", secs: 8, showQr: true };
+  const DEFAULTS = { title: "손글씨 방명록", prompt: "축하의 한마디를 남겨주세요", secs: 8, showQr: true, introUrl: "", introLabel: "시뮬레이션센터 소개" };
+  const isWebUrl = (u) => { try { const x = new URL(u); return x.protocol === "https:" || x.protocol === "http:"; } catch (e) { return false; } };
   let config = { ...DEFAULTS };
   let db = null, user = null, backend = "pending"; // "db"(claude.ai) | "server"(자체 서버) | "local"
   let serverInfo = null;
@@ -437,14 +452,25 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
     $("dTitle").textContent = config.title || DEFAULTS.title;
     renderJoin();
   }
-  let qrDrawn = false;
+  // 같은 주소면 다시 그리지 않고, 주소가 바뀌면 새로 그림
+  const drawnQr = {};
+  function drawQr(el, text) {
+    if (drawnQr[el.id] === text) return true;
+    el.textContent = ""; drawnQr[el.id] = null;
+    try { new window.QRCode(el, { text, width: 256, height: 256, colorDark: "#111111", colorLight: "#ffffff", correctLevel: window.QRCode.CorrectLevel.M }); drawnQr[el.id] = text; return true; }
+    catch (e) { return false; }
+  }
   function renderJoin() {
-    const show = config.showQr !== false && typeof window.QRCode === "function" && backend === "server"; // 로그인 없이 저장되는 서버 모드에서만 휴대폰 참여 QR 표시
-    if (show && !qrDrawn) {
-      try { new window.QRCode($("qr"), { text: JOIN_URL, width: 256, height: 256, colorDark: "#111111", colorLight: "#ffffff", correctLevel: window.QRCode.CorrectLevel.M }); qrDrawn = true; }
-      catch (e) { qrDrawn = false; }
-    }
-    $("join").hidden = !(show && qrDrawn);
+    const lib = typeof window.QRCode === "function";
+    // 방명록 남기기 QR: 로그인 없이 저장되는 서버 모드에서만
+    const showJoin = lib && config.showQr !== false && backend === "server" && drawQr($("qr"), JOIN_URL);
+    $("join").hidden = !showJoin;
+    // 시뮬레이션센터 소개 QR: 관리자 설정에 주소가 있으면 어느 모드에서나
+    const url = (config.introUrl || "").trim();
+    const showIntro = lib && isWebUrl(url) && drawQr($("introQr"), url);
+    $("intro").hidden = !showIntro;
+    $("introLabel").textContent = (config.introLabel || "").trim() || DEFAULTS.introLabel;
+    $("display").classList.toggle("has-qr", !!(showJoin || showIntro));
   }
   configListeners.push(applyConfigText);
 
@@ -777,12 +803,15 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
       $("sMsg").textContent = srv && !serverInfo.admin ? "서버에 ADMIN_PASSWORD가 설정되지 않아 삭제와 문구 변경을 할 수 없어요." : "";
       $("sKey").value = getAdminKey();
       $("sTitle").value = config.title || ""; $("sPrompt").value = config.prompt || ""; $("sSecs").value = config.secs || DEFAULTS.secs; $("sQr").checked = config.showQr !== false;
+      $("sIntroUrl").value = config.introUrl || ""; $("sIntroLabel").value = config.introLabel || "";
       $("settingsPanel").hidden = false; $("sTitle").focus();
     };
     $("sCancel").onclick = () => { $("settingsPanel").hidden = true; };
     $("settingsPanel").addEventListener("submit", async (ev) => {
       ev.preventDefault();
-      const next = { title: $("sTitle").value.trim() || DEFAULTS.title, prompt: $("sPrompt").value.trim() || DEFAULTS.prompt, secs: Math.max(3, Math.min(60, +$("sSecs").value || DEFAULTS.secs)), showQr: $("sQr").checked };
+      const next = { title: $("sTitle").value.trim() || DEFAULTS.title, prompt: $("sPrompt").value.trim() || DEFAULTS.prompt, secs: Math.max(3, Math.min(60, +$("sSecs").value || DEFAULTS.secs)), showQr: $("sQr").checked,
+        introUrl: $("sIntroUrl").value.trim(), introLabel: $("sIntroLabel").value.trim() || DEFAULTS.introLabel };
+      if (next.introUrl && !isWebUrl(next.introUrl)) { $("sMsg").textContent = "소개 페이지 주소는 https:// 로 시작하는 전체 주소로 넣어 주세요."; $("sIntroUrl").focus(); return; }
       if (backend === "server") {
         setAdminKey($("sKey").value.trim());
         canDelete = await checkAdmin(); refreshDeleteButtons();
