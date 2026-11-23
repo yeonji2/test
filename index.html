@@ -193,6 +193,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 .settings .check { flex-direction: row; align-items: center; gap: 8px; color: var(--stage-fg); }
 .settings .check input { width: 18px; height: 18px; padding: 0; }
 @media (max-width: 700px) { .qrs { display: none; } }
+/* 시작 화면 QR: 가운데 나란히 */
+.home-qrs { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; --qr-w: clamp(120px, 14vw, 170px); }
+.home-qrs .join { border: 1px solid var(--line); box-shadow: none; }
 
 /* ---------- 추첨 화면 ---------- */
 #draw { background: var(--stage); color: var(--stage-fg); height: 100%; overflow: hidden; display: flex; flex-direction: column; color-scheme: dark; position: relative;
@@ -247,6 +250,16 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
       <strong>베스트 방명록 뽑기</strong>
       <span>지금까지 모인 방명록 전체에서 1개를 무작위로 뽑아 크게 보여줍니다.</span>
     </button>
+  </div>
+  <div class="home-qrs" id="homeQrs" hidden>
+    <div class="join" id="hJoin" hidden>
+      <div class="qr" id="hQr" role="img" aria-label="방명록 남기기 QR 코드"></div>
+      <span>방명록 남기기</span>
+    </div>
+    <div class="join" id="hIntro" hidden>
+      <div class="qr" id="hIntroQr" role="img" aria-label="시뮬레이션센터 소개 QR 코드"></div>
+      <span id="hIntroLabel">시뮬레이션센터 소개</span>
+    </div>
   </div>
   <p class="notice" id="homeNotice">연결 상태를 확인하는 중…</p>
 </section>
@@ -473,6 +486,12 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
     $("intro").hidden = !showIntro;
     $("introLabel").textContent = (config.introLabel || "").trim() || DEFAULTS.introLabel;
     $("display").classList.toggle("has-qr", !!(showJoin || showIntro));
+    // 시작 화면에도 같은 QR 두 개
+    const hJoin = showJoin && drawQr($("hQr"), JOIN_URL);
+    const hIntro = showIntro && drawQr($("hIntroQr"), url);
+    $("hJoin").hidden = !hJoin; $("hIntro").hidden = !hIntro;
+    $("hIntroLabel").textContent = $("introLabel").textContent;
+    $("homeQrs").hidden = !(hJoin || hIntro);
   }
   configListeners.push(applyConfigText);
 
