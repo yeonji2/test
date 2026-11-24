@@ -241,7 +241,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 
 <!-- 시작 화면 -->
 <section id="home" class="view">
-  <h1 id="homeTitle">손글씨 방명록</h1>
+  <h1 id="homeTitle">제4회 단국대학교 간호대학 홈커밍데이</h1>
   <p class="lead">참가자가 태블릿에 손으로 쓰고 <b>남기기</b>를 누르면, 대형 화면에 그 방명록이 전체화면으로 떠오릅니다. 이 기기를 어떤 용도로 쓸지 고르세요.</p>
   <div class="choices">
     <button class="choice" id="goWrite" type="button">
@@ -277,7 +277,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 <section id="write" class="view" hidden>
   <div class="w-head">
     <div class="titles">
-      <div class="ev" id="wEvent">손글씨 방명록</div>
+      <div class="ev" id="wEvent">제4회 단국대학교 간호대학 홈커밍데이</div>
       <div class="prompt" id="wPrompt">축하의 한마디를 남겨주세요</div>
     </div>
     <button class="ghost" id="wFull" type="button">전체화면</button>
@@ -355,7 +355,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 <!-- 전시 화면 -->
 <section id="display" class="view" hidden>
   <div class="d-head">
-    <h2 id="dTitle">손글씨 방명록</h2>
+    <h2 id="dTitle">제4회 단국대학교 간호대학 홈커밍데이</h2>
     <div class="d-count"><b id="dCount">0</b> 개의 방명록</div>
     <div class="d-tools">
       <button id="dSettings" type="button" hidden>행사 문구</button>
@@ -410,7 +410,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
   // 로그인 없이 쓰는 Railway 작성 화면. 자체 서버가 아닌 곳(claude.ai 등)에서 연 전시 화면의 QR도 이 주소로 연결
   const ARTIFACT_JOIN_URL = "https://test-production-39b99f1d.up.railway.app/#write";
   let JOIN_URL = ARTIFACT_JOIN_URL;
-  const DEFAULTS = { title: "손글씨 방명록", prompt: "축하의 한마디를 남겨주세요", secs: 8, showQr: true, introUrl: "https://simulationcenter-production.up.railway.app/", introLabel: "시뮬레이션센터 소개" };
+  const DEFAULTS = { title: "제4회 단국대학교 간호대학 홈커밍데이", prompt: "축하의 한마디를 남겨주세요", secs: 8, showQr: true, introUrl: "https://simulationcenter-production.up.railway.app/", introLabel: "시뮬레이션센터 소개" };
   const isWebUrl = (u) => { try { const x = new URL(u); return x.protocol === "https:" || x.protocol === "http:"; } catch (e) { return false; } };
   let config = { ...DEFAULTS };
   let db = null, user = null, backend = "pending"; // "db"(claude.ai) | "server"(자체 서버) | "local"

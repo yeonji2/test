@@ -11,7 +11,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
 const MAX_BODY = 400 * 1024;
 const MAX_ENTRIES = 2000;
 const LIST_LIMIT = 300;
-const DEFAULT_CONFIG = { title: "손글씨 방명록", prompt: "축하의 한마디를 남겨주세요", secs: 8, showQr: true, introUrl: "https://simulationcenter-production.up.railway.app/", introLabel: "시뮬레이션센터 소개" };
+const DEFAULT_CONFIG = { title: "제4회 단국대학교 간호대학 홈커밍데이", prompt: "축하의 한마디를 남겨주세요", secs: 8, showQr: true, introUrl: "https://simulationcenter-production.up.railway.app/", introLabel: "시뮬레이션센터 소개" };
 // 소개 QR에 넣을 주소는 http/https만 허용
 const cleanUrl = (u) => { try { const x = new URL(String(u || "").trim()); return /^https?:$/.test(x.protocol) ? x.href.slice(0, 500) : ""; } catch (e) { return ""; } };
 const TYPES = { "image/webp": "webp", "image/jpeg": "jpg", "image/png": "png" };
@@ -168,6 +168,7 @@ const server = http.createServer(async (req, res) => {
     if (p === "/api/config" && req.method === "GET") {
       const c = { ...DEFAULT_CONFIG, ...(await store.getConfig()) };
       if (!c.introUrl) c.introUrl = DEFAULT_CONFIG.introUrl; // 비어 있으면 시뮬레이션센터 기본 주소
+      if (!c.title || c.title === "손글씨 방명록") c.title = DEFAULT_CONFIG.title; // 예전 기본 이름이 저장돼 있어도 새 행사 이름으로
       return send(res, 200, c);
     }
     if (p === "/api/config" && req.method === "PUT") {
