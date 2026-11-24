@@ -145,6 +145,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 .settings input { background: var(--stage); color: var(--stage-fg); border: 1px solid #2a3350; border-radius: 8px; padding: 9px 10px; font: inherit; font-size: 15px; }
 .settings .s-msg { font-size: 13px; color: #ffb4a8; min-height: 0; }
 .settings .s-msg:empty { display: none; }
+.settings button.danger { background: transparent; border: 1px solid #c2362b; color: #ff9b8f; align-self: flex-start; }
+.settings button.danger.armed { background: #c2362b; color: #fff; }
 .settings .row { display: flex; gap: 8px; justify-content: flex-end; }
 .settings button { background: var(--stage); color: var(--stage-fg); border: 1px solid #2a3350; border-radius: 8px; padding: 8px 14px; }
 .settings button.save { background: #ffd65a; color: #1a1400; border-color: #ffd65a; font-weight: 600; }
@@ -392,6 +394,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
     <label class="check" for="sQr" id="sQrRow"><input id="sQr" type="checkbox">‘방명록 남기기’ QR 코드 표시</label>
     <label for="sIntroUrl">소개 페이지 주소 (비워두면 시뮬레이션센터 기본 주소)<input id="sIntroUrl" type="url" maxlength="500" placeholder="https://…" inputmode="url"></label>
     <label for="sIntroLabel">소개 QR 아래 문구<input id="sIntroLabel" maxlength="30" placeholder="시뮬레이션센터 소개"></label>
+    <button type="button" class="danger" id="sWipe" hidden>방명록 전체 삭제</button>
     <div class="s-msg" id="sMsg" role="status"></div>
     <div class="row">
       <button type="button" id="sCancel">닫기</button>
@@ -863,6 +866,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
           es.onopen = () => { if (opened) load(false); opened = true; $("dFoot").textContent = ""; };
           es.onerror = () => { $("dFoot").textContent = "실시간 연결이 잠시 끊겼어요. 자동으로 다시 연결하는 중…"; };
           es.addEventListener("entry", (m) => { try { const x = JSON.parse(m.data); ingest([x], false); setEntries([x, ...entries.filter((y) => y.id !== x.id)]); } catch (e) {} });
+          es.addEventListener("reset", () => { queue.length = 0; setEntries([]); });
           es.addEventListener("delete", (m) => { try { const { id } = JSON.parse(m.data); setEntries(entries.filter((y) => y.id !== id)); } catch (e) {} });
         } else setInterval(() => load(false), 5000);
       } else {
@@ -893,6 +897,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
     $("dSettings").onclick = () => {
       const srv = backend === "server";
       $("sAdminRow").hidden = !srv;
+      $("sWipe").hidden = !srv;
       $("sQrRow").hidden = !srv;
       if (!srv) $("sQr").checked = true;
       $("sMsg").textContent = srv && !serverInfo.admin ? "서버에 ADMIN_PASSWORD가 설정되지 않아 삭제와 문구 변경을 할 수 없어요." : "";
@@ -902,6 +907,16 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
       $("settingsPanel").hidden = false; $("sTitle").focus();
     };
     $("sCancel").onclick = () => { $("settingsPanel").hidden = true; };
+    // 방명록 전체 삭제: 두 번 눌러야 지워짐
+    let wipeArmed = null;
+    $("sWipe").onclick = async () => {
+      const b = $("sWipe");
+      if (!wipeArmed) { b.textContent = "정말 모두 지울까요? 한 번 더 누르세요"; b.classList.add("armed"); wipeArmed = setTimeout(() => { wipeArmed = null; b.textContent = "방명록 전체 삭제"; b.classList.remove("armed"); }, 4000); return; }
+      clearTimeout(wipeArmed); wipeArmed = null; b.textContent = "방명록 전체 삭제"; b.classList.remove("armed");
+      setAdminKey($("sKey").value.trim());
+      try { const r = await api("/api/entries", { method: "DELETE", admin: true }); $("sMsg").textContent = `방명록 ${r.deleted}개를 지웠어요.`; canDelete = true; }
+      catch (e) { $("sMsg").textContent = e.status === 401 ? "비밀번호가 맞지 않아요. 관리자 비밀번호를 확인해 주세요." : "지우지 못했어요. 잠시 후 다시 시도해 주세요."; }
+    };
     $("settingsPanel").addEventListener("submit", async (ev) => {
       ev.preventDefault();
       const next = { title: $("sTitle").value.trim() || DEFAULTS.title, prompt: $("sPrompt").value.trim() || DEFAULTS.prompt, secs: Math.max(3, Math.min(60, +$("sSecs").value || DEFAULTS.secs)), showQr: $("sQr").checked,

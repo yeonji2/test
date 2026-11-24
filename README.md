@@ -21,6 +21,8 @@
 4. **Settings → Networking**에서 Generate Domain으로 주소를 만듭니다.
 5. `https://<주소>/api/health`에 `"storage":"postgres"`가 보이면 데이터베이스에 저장되고 있는 것입니다.
 
+`PURGE_ENTRIES`에 새 값(예: 날짜)을 넣고 배포하면 시작할 때 방명록을 한 번만 모두 지웁니다. 같은 값으로 다시 시작해도 다시 지우지 않습니다.
+
 `DATABASE_URL`이 없으면 `DATA_DIR`(기본 `./data`) 폴더에 파일로 저장합니다. 이때는 Railway 볼륨을 붙이지 않으면 재배포할 때 방명록이 사라집니다.
 
 ## 동작 방식
@@ -38,6 +40,7 @@
 | GET | `/api/entries` | 최근 방명록 300개 (최신순). `?all=1`이면 전체 (추첨용) |
 | POST | `/api/entries` | `{ "img": "data:image/...;base64,..." }` 방명록 올리기 |
 | DELETE | `/api/entries/:id` | 삭제 (헤더 `X-Admin-Key`) |
+| DELETE | `/api/entries` | 방명록 전체 삭제 (헤더 `X-Admin-Key`). 관리자 창의 **방명록 전체 삭제** 버튼 |
 | GET / PUT | `/api/config` | 행사 이름·안내 문구·표시 시간·QR 표시·소개 페이지 주소(`introUrl`)와 문구(`introLabel`) (PUT은 `X-Admin-Key`) |
 | GET | `/api/events` | 실시간 이벤트 스트림 |
 

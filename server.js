@@ -37,6 +37,9 @@ function pgStore(url) {
     async count() { return Number((await pool.query(`SELECT COUNT(*) AS n FROM guestbook_entries`)).rows[0].n); },
     async add(e, buf) { await pool.query(`INSERT INTO guestbook_entries (id, created_at, ext, data) VALUES ($1, $2, $3, $4)`, [e.id, e.createdAt, e.ext, buf]); },
     async remove(id) { await pool.query(`DELETE FROM guestbook_entries WHERE id = $1`, [id]); },
+    async clear() { return (await pool.query(`DELETE FROM guestbook_entries`)).rowCount; },
+    async getMark(k) { const r = await pool.query(`SELECT v FROM guestbook_config WHERE k = $1`, [k]); return r.rows[0] ? r.rows[0].v : null; },
+    async setMark(k, v) { await pool.query(`INSERT INTO guestbook_config (k, v) VALUES ($1, $2) ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v`, [k, JSON.stringify(v)]); },
     async image(id, ext) {
       const r = await pool.query(`SELECT data FROM guestbook_entries WHERE id = $1 AND ext = $2`, [id, ext]);
       return r.rows[0] ? r.rows[0].data : null;
@@ -66,6 +69,13 @@ function fileStore(dir) {
       fs.rm(path.join(IMG_DIR, `${e.id}.${e.ext}`), { force: true }, () => {});
     },
     async image(id, ext) { const f = path.join(IMG_DIR, `${id}.${ext}`); return fs.existsSync(f) ? fs.readFileSync(f) : null; },
+    async clear() {
+      const n = meta.entries.length;
+      for (const e of meta.entries) fs.rm(path.join(IMG_DIR, `${e.id}.${e.ext}`), { force: true }, () => {});
+      meta.entries = []; save(); return n;
+    },
+    async getMark(k) { return (meta.marks || {})[k] ?? null; },
+    async setMark(k, v) { meta.marks = { ...(meta.marks || {}), [k]: v }; save(); },
     async getConfig() { return meta.config || {}; },
     async setConfig(c) { meta.config = c; save(); },
   };
@@ -135,6 +145,13 @@ const server = http.createServer(async (req, res) => {
       broadcast("entry", publicEntry(entry));
       return send(res, 201, publicEntry(entry));
     }
+    // 방명록 전체 삭제 (관리자)
+    if (p === "/api/entries" && req.method === "DELETE") {
+      if (!isAdmin(req)) return send(res, 401, { error: "unauthorized" });
+      const n = await store.clear();
+      broadcast("reset", {});
+      return send(res, 200, { ok: true, deleted: n });
+    }
     let mm;
     if ((mm = /^\/api\/entries\/([a-z0-9-]+)$/.exec(p)) && req.method === "DELETE") {
       if (!isAdmin(req)) return send(res, 401, { error: "unauthorized" });
@@ -199,6 +216,13 @@ const server = http.createServer(async (req, res) => {
       console.error(`저장소 연결 재시도 ${i}/10: ${e.message}`);
       await new Promise((r) => setTimeout(r, 3000));
     }
+  }
+  // PURGE_ENTRIES 변수에 새 값을 넣고 배포하면 그때 한 번만 방명록을 모두 지움 (같은 값으로는 다시 지우지 않음)
+  const purge = (process.env.PURGE_ENTRIES || "").trim();
+  if (purge && (await store.getMark("purge")) !== purge) {
+    const n = await store.clear();
+    await store.setMark("purge", purge);
+    console.log(`PURGE_ENTRIES=${purge}: 방명록 ${n}개를 삭제했습니다`);
   }
   server.listen(PORT, "0.0.0.0", () => {
     console.log(`guestbook listening on :${PORT}, storage: ${store.name}${ADMIN_PASSWORD ? "" : " (ADMIN_PASSWORD not set: delete/settings disabled)"}`);
